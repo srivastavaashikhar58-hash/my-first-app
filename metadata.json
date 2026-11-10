@@ -1,0 +1,6 @@
+{
+  "name": "PitchHub",
+  "description": "Football social app featuring an interactive tactical lineup builder, squad swap sandbox, and match debate hub inspired by FotMob.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

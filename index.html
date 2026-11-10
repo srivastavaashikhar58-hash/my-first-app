@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lineup & Debate Hub • Barcelona vs Getafe</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Strictly minimalist scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #ffffff;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #000000;
+    }
+
+    /* Selected node highlight: high-contrast inverted or ring */
+    .selected-node {
+      background-color: #000000 !important;
+      color: #ffffff !important;
+      transform: scale(1.1);
+      box-shadow: 0 0 0 2px #000000;
+      z-index: 30;
+    }
+    .selected-node span {
+      color: #ffffff !important;
+    }
+
+    /* Prevent mobile text highlight during drag */
+    .no-select {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body class="bg-white text-black font-sans antialiased min-h-screen pb-20 no-select">
+
+  <!-- TOP HEADER / MATCH DETAILS -->
+  <header class="sticky top-0 z-40 bg-white border-b border-black">
+    <div class="max-w-md mx-auto px-4 py-2 flex items-center justify-between text-xs border-b border-black/20 font-mono">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 bg-black rounded-full"></span>
+        <span class="font-bold tracking-wider uppercase text-[11px]">LA LIGA • MATCHDAY 28</span>
+      </div>
+      <span class="text-gray-500 font-mono text-[11px]">TODAY 21:00 CET</span>
+    </div>
+
+    <!-- Match Teams Header -->
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="text-left">
+        <div class="text-base font-black tracking-tight uppercase leading-none">FC BARCELONA</div>
+        <div class="text-[10px] text-gray-500 font-mono mt-1">HOME • 1ST PLACE</div>
+      </div>
+
+      <div class="px-2.5 py-1 border border-black text-xs font-mono font-bold tracking-widest bg-gray-50">
+        VS
+      </div>
+
+      <div class="text-right">
+        <div class="text-base font-black tracking-tight uppercase leading-none">GETAFE CF</div>
+        <div class="text-[10px] text-gray-500 font-mono mt-1">AWAY • 14TH PLACE</div>
+      </div>
+    </div>
+
+    <!-- View Switcher Tab Navigation -->
+    <div class="max-w-md mx-auto px-4 pb-2">
+      <div class="grid grid-cols-2 border border-black bg-white p-0.5 text-xs font-bold font-mono">
+        <button id="nav-header-builder" onclick="switchView('builder')" class="py-2 px-3 transition-colors bg-black text-white flex items-center justify-center gap-1.5 uppercase tracking-wide">
+          <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Lineup Builder
+        </button>
+        <button id="nav-header-feed" onclick="switchView('feed')" class="py-2 px-3 transition-colors bg-white text-black hover:bg-gray-100 flex items-center justify-center gap-1.5 uppercase tracking-wide">
+          <i data-lucide="message-square" class="w-3.5 h-3.5"></i> Match Debate
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-md mx-auto px-3 pt-3">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: LINEUP BUILDER VIEW (THE SANDBOX) -->
+    <!-- ========================================== -->
+    <section id="view-lineup-builder" class="space-y-3">
+
+      <!-- Formation Bar -->
+      <div class="flex items-center justify-between border border-black p-3 bg-gray-50">
+        <div>
+          <span class="block text-[10px] font-mono uppercase text-gray-500 tracking-wider">Formation</span>
+          <select id="formationSelect" onchange="changeFormation(this.value)" class="bg-white border border-black text-xs font-mono font-bold px-2 py-1 mt-0.5 focus:outline-none cursor-pointer">
+            <option value="4-3-3" selected>4-3-3 (Default)</option>
+            <option value="4-2-3-1">4-2-3-1</option>
+            <option value="3-4-3">3-4-3</option>
+            <option value="4-4-2">4-4-2</option>
+          </select>
+        </div>
+
+        <div class="text-right flex items-center gap-3">
+          <div>
+            <span class="block text-[10px] font-mono uppercase text-gray-500 tracking-wider">Avg Rating</span>
+            <span id="avgRatingBadge" class="text-xs font-mono font-bold">8.3 / 10</span>
+          </div>
+          <button onclick="resetLineup()" title="Reset lineup" class="border border-black p-1.5 bg-white hover:bg-gray-100">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Selection / Swap Notice -->
+      <div id="selectionBanner" class="border border-black bg-black text-white px-3 py-2 text-xs font-mono flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
+          <span>Selected: <strong id="selectedPlayerLabel">Lamine Yamal</strong> • Tap bench to swap</span>
+        </div>
+        <button onclick="clearSelection()" class="text-[10px] underline hover:text-gray-300">Cancel</button>
+      </div>
+
+      <!-- VERTICAL FOOTBALL PITCH UI (White Background, Crisp Black Lines) -->
+      <div class="relative w-full aspect-[1/1.38] bg-white border border-black overflow-hidden select-none">
+        
+        <!-- PITCH MARKINGS: CRISP 1px/1.5px BLACK LINES -->
+        <svg class="absolute inset-0 w-full h-full pointer-events-none stroke-black" fill="none" stroke-width="1.2">
+          <!-- Outer Boundary Touchlines -->
+          <rect x="12" y="12" width="calc(100% - 24)" height="calc(100% - 24)" />
+
+          <!-- Halfway Line -->
+          <line x1="12" y1="50%" x2="calc(100% - 12)" y2="50%" />
+
+          <!-- Center Circle & Center Spot -->
+          <circle cx="50%" cy="50%" r="40" />
+          <circle cx="50%" cy="50%" r="2" fill="black" />
+
+          <!-- TOP PENALTY AREA (Away End / Attack) -->
+          <rect x="22%" y="12" width="56%" height="16%" />
+          <!-- Top 6-yard Box -->
+          <rect x="36%" y="12" width="28%" height="6.5%" />
+          <!-- Top Penalty Spot -->
+          <circle cx="50%" cy="11%" r="2" fill="black" />
+          <!-- Top Penalty Arc (D) -->
+          <path d="M 39%,28% A 28 28 0 0 0 61%,28%" />
+
+          <!-- BOTTOM PENALTY AREA (Home End / Defense & GK) -->
+          <rect x="22%" y="calc(84% - 12px)" width="56%" height="16%" />
+          <!-- Bottom 6-yard Box -->
+          <rect x="36%" y="calc(93.5% - 12px)" width="28%" height="6.5%" />
+          <!-- Bottom Penalty Spot -->
+          <circle cx="50%" cy="calc(89% - 12px)" r="2" fill="black" />
+          <!-- Bottom Penalty Arc (D) -->
+          <path d="M 39%,calc(84% - 12px) A 28 28 0 0 1 61%,calc(84% - 12px)" />
+
+          <!-- Corner Arcs -->
+          <path d="M 12,24 A 12 12 0 0 1 24,12" />
+          <path d="M calc(100% - 24),12 A 12 12 0 0 1 calc(100% - 12),24" />
+          <path d="M 12,calc(100% - 24) A 12 12 0 0 0 24,calc(100% - 12)" />
+          <path d="M calc(100% - 24),calc(100% - 12) A 12 12 0 0 0 calc(100% - 12),calc(100% - 24)" />
+        </svg>
+
+        <!-- Direction of Play Indicator -->
+        <div class="absolute top-3 right-4 flex items-center space-x-1 text-[9px] font-mono text-black border border-black bg-white px-1.5 py-0.5">
+          <span>ATTACK</span>
+          <i data-lucide="arrow-up" class="w-3 h-3 text-black"></i>
+        </div>
+
+        <!-- 11 CIRCULAR PLAYER NODES (White Circle, Solid Black Border, Black Text) -->
+        <div id="pitchNodesContainer" class="absolute inset-0 p-3">
+          <!-- Populated dynamically by renderPitchLineup() -->
+        </div>
+
+      </div>
+
+      <!-- SQUAD SELECTOR PANEL (Below Pitch) -->
+      <div class="border border-black p-3 bg-white">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-bold text-xs uppercase tracking-wider font-mono">Squad Selector (Bench)</h3>
+          <span class="text-[10px] text-gray-500 font-mono">Drag or click to swap</span>
+        </div>
+
+        <!-- Position Filter Buttons -->
+        <div class="flex items-center gap-1 overflow-x-auto pb-2 text-xs font-mono">
+          <button onclick="filterBench('ALL')" id="filter-btn-ALL" class="bench-filter px-2 py-1 border border-black bg-black text-white text-[10px] uppercase font-bold">All (9)</button>
+          <button onclick="filterBench('FW')" id="filter-btn-FW" class="bench-filter px-2 py-1 border border-black bg-white text-black hover:bg-gray-100 text-[10px] uppercase">FW (3)</button>
+          <button onclick="filterBench('MF')" id="filter-btn-MF" class="bench-filter px-2 py-1 border border-black bg-white text-black hover:bg-gray-100 text-[10px] uppercase">MF (3)</button>
+          <button onclick="filterBench('DF')" id="filter-btn-DF" class="bench-filter px-2 py-1 border border-black bg-white text-black hover:bg-gray-100 text-[10px] uppercase">DF (2)</button>
+          <button onclick="filterBench('GK')" id="filter-btn-GK" class="bench-filter px-2 py-1 border border-black bg-white text-black hover:bg-gray-100 text-[10px] uppercase">GK (1)</button>
+        </div>
+
+        <!-- Horizontal Scrollable Bench Players -->
+        <div id="benchContainer" class="flex gap-2 overflow-x-auto pb-1 pt-1">
+          <!-- Populated dynamically by renderBench() -->
+        </div>
+      </div>
+
+      <!-- STARK BLACK "PUBLISH TO FEED" BUTTON (White Text) -->
+      <div>
+        <button onclick="publishLineupToFeed()" class="w-full py-3.5 px-4 bg-black text-white font-bold text-xs uppercase tracking-widest border border-black hover:bg-neutral-800 active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+          <i data-lucide="send" class="w-4 h-4 text-white"></i> Publish to Feed
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: MATCH DEBATE FEED (THE SOCIAL HUB) -->
+    <!-- ========================================== -->
+    <section id="view-debate-feed" class="space-y-4 hidden">
+
+      <!-- Match Hub Discussion Bar -->
+      <div class="border border-black p-3 bg-gray-50 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider block">Match Debate Hub</span>
+          <h4 class="text-xs font-bold uppercase">Barcelona vs Getafe • Live Takes</h4>
+        </div>
+        <span class="text-xs font-mono font-bold border border-black bg-white px-2 py-1">2.4k Posts</span>
+      </div>
+
+      <!-- User Post Composer -->
+      <div class="border border-black p-3 bg-white space-y-2">
+        <textarea id="quickTakeInput" rows="2" placeholder="Write your tactical opinion on Barcelona vs Getafe..." class="w-full border border-black p-2 text-xs text-black placeholder-gray-500 focus:outline-none font-sans"></textarea>
+        <div class="flex items-center justify-between pt-1">
+          <span class="text-[10px] font-mono text-gray-500">#BarcaGetafe #LaLiga</span>
+          <button onclick="submitUserTake()" class="px-3 py-1.5 bg-black text-white text-xs font-mono uppercase font-bold border border-black hover:bg-neutral-800">
+            Post Take
+          </button>
+        </div>
+      </div>
+
+      <!-- POSTS STREAM -->
+      <div id="postsStream" class="space-y-4">
+
+        <!-- POST 1: LINEUP GRAPHIC SHARE (Required) -->
+        <article class="border border-black p-4 bg-white space-y-3">
+          <div class="flex items-center justify-between border-b border-black/10 pb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full border border-black bg-black text-white font-mono font-bold text-xs flex items-center justify-center">
+                BL
+              </div>
+              <div>
+                <div class="font-bold text-xs uppercase leading-none">BlaugranaTactics</div>
+                <div class="text-[10px] text-gray-500 font-mono mt-0.5">@tactical_blau • 18m ago</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono uppercase border border-black px-1.5 py-0.5">Lineup Share</span>
+          </div>
+
+          <!-- Post Text -->
+          <p class="text-xs text-black leading-relaxed font-normal">
+            "This is the only way we break down the low block today. Pedri drifting into the left half-space with Yamal holding maximum width on the right to isolate Diego Rico in 1v1 duels."
+          </p>
+
+          <!-- Generated Lineup Graphic (Minimalist Black & White Pitch) -->
+          <div class="border border-black p-2.5 bg-gray-50 space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-mono">
+              <span class="font-bold uppercase">Tactical Lineup • 4-3-3 Attacking</span>
+              <span class="text-gray-500 text-[10px]">FC Barcelona</span>
+            </div>
+
+            <!-- Mini Black & White Pitch Representation -->
+            <div class="relative w-full h-44 bg-white border border-black p-2 flex flex-col justify-between">
+              <!-- Attack Row -->
+              <div class="flex justify-around items-center pt-1">
+                <div class="flex flex-col items-center">
+                  <div class="w-6 h-6 rounded-full border border-black bg-white font-mono text-[10px] font-bold flex items-center justify-center">11</div>
+                  <span class="text-[8px] font-bold mt-0.5">Raphinha</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="w-6 h-6 rounded-full border border-black bg-white font-mono text-[10px] font-bold flex items-center justify-center">9</div>
+                  <span class="text-[8px] font-bold mt-0.5">Lewy</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="w-6 h-6 rounded-full border border-black bg-white font-mono text-[10px] font-bold flex items-center justify-center">19</div>
+                  <span class="text-[8px] font-bold mt-0.5">Yamal</span>
+                </div>
+              </div>
+
+              <!-- Midfield Row -->
+              <div class="flex justify-around items-center">
+                <div class="flex flex-col items-center">
+                  <div class="w-5 h-5 rounded-full border border-black bg-white font-mono text-[9px] font-bold flex items-center justify-center">8</div>
+                  <span class="text-[8px]">Pedri</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="w-5 h-5 rounded-full border border-black bg-white font-mono text-[9px] font-bold flex items-center justify-center">17</div>
+                  <span class="text-[8px]">Casadó</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="w-5 h-5 rounded-full border border-black bg-white font-mono text-[9px] font-bold flex items-center justify-center">21</div>
+                  <span class="text-[8px]">De Jong</span>
+                </div>
+              </div>
+
+              <!-- Defense & GK Row -->
+              <div class="flex justify-around items-center pb-1">
+                <div class="flex flex-col items-center">
+                  <span class="text-[8px] font-mono font-bold">Balde</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <span class="text-[8px] font-mono font-bold">Cubarsí</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <span class="text-[8px] font-mono font-bold">Araújo</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <span class="text-[8px] font-mono font-bold">Koundé</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <span class="text-[8px] font-mono font-bold">Ter Stegen</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Minimalist Voting Bar (Outline Icons) -->
+          <div class="flex items-center justify-between pt-2 border-t border-black text-xs font-mono">
+            <div class="flex items-center gap-3">
+              <button onclick="handleVote(this, 184)" class="vote-btn flex items-center gap-1.5 px-2 py-1 border border-black hover:bg-gray-100 transition-colors">
+                <i data-lucide="arrow-up" class="w-3.5 h-3.5 stroke-black"></i>
+                <span class="font-bold vote-count">184</span>
+              </button>
+
+              <button onclick="handleDownvote(this, 9)" class="vote-down-btn flex items-center gap-1.5 px-2 py-1 border border-black hover:bg-gray-100 transition-colors">
+                <i data-lucide="arrow-down" class="w-3.5 h-3.5 stroke-black"></i>
+                <span class="font-bold vote-down-count">9</span>
+              </button>
+            </div>
+
+            <button onclick="toggleComments('comments-1')" class="flex items-center gap-1 text-gray-600 hover:text-black">
+              <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+              <span>32 comments</span>
+            </button>
+          </div>
+
+          <!-- Collapsible Comments -->
+          <div id="comments-1" class="hidden border-t border-black/10 pt-2 space-y-2 text-xs">
+            <div class="bg-gray-50 border border-black/20 p-2">
+              <div class="flex justify-between text-[10px] font-mono text-gray-500 mb-0.5">
+                <span>@FlickBall</span>
+                <span>12m ago</span>
+              </div>
+              <p>Agreed. Yamal hugging the touchline stretches their back five horizontally.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- POST 2: STATS-INTEGRATED POST (Passing Accuracy & Outline Voting) -->
+        <article class="border border-black p-4 bg-white space-y-3">
+          <div class="flex items-center justify-between border-b border-black/10 pb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full border border-black bg-black text-white font-mono font-bold text-xs flex items-center justify-center">
+                OP
+              </div>
+              <div>
+                <div class="font-bold text-xs uppercase leading-none">OptaScout_Spain</div>
+                <div class="text-[10px] text-gray-500 font-mono mt-0.5">@optascout • 44m ago</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono uppercase border border-black px-1.5 py-0.5">Passing Matrix</span>
+          </div>
+
+          <p class="text-xs text-black leading-relaxed font-normal">
+            Pedri's passing accuracy in the final third over the last 5 fixtures. Against Getafe's disciplined 5-4-1 low block, his short combinational play through zone 14 is the decisive metric.
+          </p>
+
+          <!-- Minimalist Stats Display -->
+          <div class="border border-black p-3 bg-gray-50 space-y-2.5">
+            <div class="flex items-center justify-between text-xs font-mono font-bold border-b border-black pb-1.5">
+              <span>PEDRI • PASSING ACCURACY METRICS</span>
+              <span>89.2% AVG</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center font-mono">
+              <div class="border border-black bg-white p-2">
+                <span class="block text-[9px] text-gray-500 uppercase">Total Completed</span>
+                <span class="text-sm font-black">58 / 65</span>
+                <span class="text-[9px] text-gray-600 block">89.2% rate</span>
+              </div>
+              <div class="border border-black bg-white p-2">
+                <span class="block text-[9px] text-gray-500 uppercase">Final Third</span>
+                <span class="text-sm font-black">27 / 31</span>
+                <span class="text-[9px] text-gray-600 block">87.1% rate</span>
+              </div>
+              <div class="border border-black bg-white p-2">
+                <span class="block text-[9px] text-gray-500 uppercase">Key Passes</span>
+                <span class="text-sm font-black">5</span>
+                <span class="text-[9px] text-gray-600 block">2 Big Chances</span>
+              </div>
+            </div>
+
+            <!-- Minimal Passing Accuracy Progress Bar -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-[10px] font-mono text-gray-600">
+                <span>Pass Completion Rate</span>
+                <span>89.2%</span>
+              </div>
+              <div class="w-full h-2 border border-black bg-white">
+                <div class="h-full bg-black" style="width: 89.2%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Minimal Outline Voting Buttons -->
+          <div class="flex items-center justify-between pt-2 border-t border-black text-xs font-mono">
+            <div class="flex items-center gap-3">
+              <button onclick="handleVote(this, 310)" class="vote-btn flex items-center gap-1.5 px-2 py-1 border border-black hover:bg-gray-100 transition-colors">
+                <i data-lucide="arrow-up" class="w-3.5 h-3.5 stroke-black"></i>
+                <span class="font-bold vote-count">310</span>
+              </button>
+
+              <button onclick="handleDownvote(this, 4)" class="vote-down-btn flex items-center gap-1.5 px-2 py-1 border border-black hover:bg-gray-100 transition-colors">
+                <i data-lucide="arrow-down" class="w-3.5 h-3.5 stroke-black"></i>
+                <span class="font-bold vote-down-count">4</span>
+              </button>
+            </div>
+
+            <button onclick="toggleComments('comments-2')" class="flex items-center gap-1 text-gray-600 hover:text-black">
+              <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+              <span>18 comments</span>
+            </button>
+          </div>
+
+          <div id="comments-2" class="hidden border-t border-black/10 pt-2 space-y-2 text-xs">
+            <div class="bg-gray-50 border border-black/20 p-2">
+              <div class="flex justify-between text-[10px] font-mono text-gray-500 mb-0.5">
+                <span>@StatBordalas</span>
+                <span>30m ago</span>
+              </div>
+              <p>Getafe's double pivot will compress Pedri's space. Let's see if he maintains this accuracy under duress.</p>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST NOTIFICATION (Minimalist Black & White) -->
+  <div id="toastNotification" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-black text-white text-xs font-mono px-4 py-2 border border-black transform -translate-y-12 opacity-0 transition-all duration-200 pointer-events-none">
+    <span id="toastMessage">Action completed</span>
+  </div>
+
+  <!-- FIXED BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-black py-2 px-6">
+    <div class="max-w-md mx-auto grid grid-cols-2 gap-2 text-xs font-mono font-bold">
+      <button id="bottom-nav-builder" onclick="switchView('builder')" class="py-2.5 px-3 border border-black bg-black text-white flex items-center justify-center gap-2 uppercase">
+        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+        <span>Lineup</span>
+      </button>
+
+      <button id="bottom-nav-feed" onclick="switchView('feed')" class="py-2.5 px-3 border border-black bg-white text-black hover:bg-gray-100 flex items-center justify-center gap-2 uppercase">
+        <i data-lucide="message-square" class="w-4 h-4"></i>
+        <span>Debate</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    // REALISTIC MOCK DATA: FC BARCELONA STARTING XI & BENCH
+    const initialLineup = [
+      { id: 'p1', name: 'Raphinha', pos: 'LW', num: 11, rating: 8.7, x: 20, y: 15 },
+      { id: 'p2', name: 'Lewandowski', pos: 'ST', num: 9, rating: 8.5, x: 50, y: 12 },
+      { id: 'p3', name: 'Lamine Yamal', pos: 'RW', num: 19, rating: 8.9, x: 80, y: 15 },
+
+      { id: 'p4', name: 'Pedri', pos: 'LCM', num: 8, rating: 8.6, x: 26, y: 38 },
+      { id: 'p5', name: 'M. Casadó', pos: 'CDM', num: 17, rating: 7.8, x: 50, y: 46 },
+      { id: 'p6', name: 'F. de Jong', pos: 'RCM', num: 21, rating: 8.1, x: 74, y: 38 },
+
+      { id: 'p7', name: 'Balde', pos: 'LB', num: 3, rating: 7.8, x: 16, y: 70 },
+      { id: 'p8', name: 'Pau Cubarsí', pos: 'LCB', num: 2, rating: 8.0, x: 38, y: 72 },
+      { id: 'p9', name: 'R. Araújo', pos: 'RCB', num: 4, rating: 8.2, x: 62, y: 72 },
+      { id: 'p10', name: 'J. Koundé', pos: 'RB', num: 23, rating: 8.3, x: 84, y: 70 },
+
+      { id: 'p11', name: 'Ter Stegen', pos: 'GK', num: 1, rating: 8.0, x: 50, y: 91 }
+    ];
+
+    const initialBench = [
+      { id: 'b1', name: 'Dani Olmo', pos: 'MF', num: 20, rating: 8.2, role: 'CAM' },
+      { id: 'b2', name: 'Ferran Torres', pos: 'FW', num: 7, rating: 7.3, role: 'LW/ST' },
+      { id: 'b3', name: 'Fermín López', pos: 'MF', num: 16, rating: 7.6, role: 'CM' },
+      { id: 'b4', name: 'Gavi', pos: 'MF', num: 6, rating: 7.9, role: 'CM/DM' },
+      { id: 'b5', name: 'A. Christensen', pos: 'DF', num: 15, rating: 7.4, role: 'CB/DM' },
+      { id: 'b6', name: 'Iñigo Martínez', pos: 'DF', num: 5, rating: 7.5, role: 'CB' },
+      { id: 'b7', name: 'Pau Víctor', pos: 'FW', num: 18, rating: 7.0, role: 'ST' },
+      { id: 'b8', name: 'Ansu Fati', pos: 'FW', num: 10, rating: 7.1, role: 'LW' },
+      { id: 'b9', name: 'Iñaki Peña', pos: 'GK', num: 13, rating: 6.9, role: 'GK' }
+    ];
+
+    let currentLineup = JSON.parse(JSON.stringify(initialLineup));
+    let currentBench = JSON.parse(JSON.stringify(initialBench));
+    let selectedPitchPlayerId = 'p3'; // Default selection: Lamine Yamal
+    let benchFilterType = 'ALL';
+    let currentFormation = '4-3-3';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      renderPitchLineup();
+      renderBench();
+      updateSelectedLabel();
+    });
+
+    // VIEW TOGGLE LOGIC
+    function switchView(viewName) {
+      const builderSection = document.getElementById('view-lineup-builder');
+      const feedSection = document.getElementById('view-debate-feed');
+      const headerBuilderBtn = document.getElementById('nav-header-builder');
+      const headerFeedBtn = document.getElementById('nav-header-feed');
+      const bottomBuilderBtn = document.getElementById('bottom-nav-builder');
+      const bottomFeedBtn = document.getElementById('bottom-nav-feed');
+
+      if (viewName === 'builder') {
+        builderSection.classList.remove('hidden');
+        feedSection.classList.add('hidden');
+
+        headerBuilderBtn.className = "py-2 px-3 transition-colors bg-black text-white flex items-center justify-center gap-1.5 uppercase tracking-wide";
+        headerFeedBtn.className = "py-2 px-3 transition-colors bg-white text-black hover:bg-gray-100 flex items-center justify-center gap-1.5 uppercase tracking-wide";
+
+        bottomBuilderBtn.className = "py-2.5 px-3 border border-black bg-black text-white flex items-center justify-center gap-2 uppercase";
+        bottomFeedBtn.className = "py-2.5 px-3 border border-black bg-white text-black hover:bg-gray-100 flex items-center justify-center gap-2 uppercase";
+      } else {
+        builderSection.classList.add('hidden');
+        feedSection.classList.remove('hidden');
+
+        headerBuilderBtn.className = "py-2 px-3 transition-colors bg-white text-black hover:bg-gray-100 flex items-center justify-center gap-1.5 uppercase tracking-wide";
+        headerFeedBtn.className = "py-2 px-3 transition-colors bg-black text-white flex items-center justify-center gap-1.5 uppercase tracking-wide";
+
+        bottomBuilderBtn.className = "py-2.5 px-3 border border-black bg-white text-black hover:bg-gray-100 flex items-center justify-center gap-2 uppercase";
+        bottomFeedBtn.className = "py-2.5 px-3 border border-black bg-black text-white flex items-center justify-center gap-2 uppercase";
+      }
+      lucide.createIcons();
+    }
+
+    // RENDER PITCH NODES: PURE WHITE CIRCLE, SOLID BLACK BORDER, BLACK TEXT
+    function renderPitchLineup() {
+      const container = document.getElementById('pitchNodesContainer');
+      container.innerHTML = '';
+      let totalRating = 0;
+
+      currentLineup.forEach(player => {
+        totalRating += player.rating;
+        const isSelected = selectedPitchPlayerId === player.id;
+
+        const node = document.createElement('div');
+        node.className = `absolute flex flex-col items-center cursor-pointer transition-transform transform -translate-x-1/2 -translate-y-1/2 ${isSelected ? 'selected-node-wrapper' : 'hover:scale-105'}`;
+        node.style.left = `${player.x}%`;
+        node.style.top = `${player.y}%`;
+        node.title = `${player.name} (${player.pos}) • #${player.num}`;
+
+        node.innerHTML = `
+          <!-- Pure White Circle, Solid Black Border, Black Text -->
+          <div class="w-9 h-9 rounded-full bg-white border-2 border-black flex items-center justify-center font-mono font-bold text-xs text-black shadow-sm ${isSelected ? 'selected-node' : ''}">
+            ${player.num}
+          </div>
+
+          <!-- Player Name & Position -->
+          <div class="mt-1 bg-white border border-black px-1.5 py-0.5 text-center flex items-center gap-1 font-mono">
+            <span class="text-[8px] font-bold text-gray-500">${player.pos}</span>
+            <span class="text-[9px] font-bold text-black truncate max-w-[65px]">${player.name.split(' ').pop()}</span>
+          </div>
+        `;
+
+        node.onclick = (e) => {
+          e.stopPropagation();
+          selectPitchPlayer(player.id);
+        };
+
+        // HTML5 Drag and Drop
+        node.draggable = true;
+        node.ondragstart = (e) => {
+          e.dataTransfer.setData('text/plain', player.id);
+        };
+        node.ondragover = (e) => e.preventDefault();
+        node.ondrop = (e) => {
+          e.preventDefault();
+          const draggedId = e.dataTransfer.getData('text/plain');
+          handleDropSwap(draggedId, player.id);
+        };
+
+        container.appendChild(node);
+      });
+
+      const avg = (totalRating / currentLineup.length).toFixed(1);
+      const avgBadge = document.getElementById('avgRatingBadge');
+      if (avgBadge) avgBadge.textContent = `${avg} / 10`;
+    }
+
+    function selectPitchPlayer(playerId) {
+      selectedPitchPlayerId = playerId;
+      updateSelectedLabel();
+      renderPitchLineup();
+    }
+
+    function clearSelection() {
+      selectedPitchPlayerId = null;
+      updateSelectedLabel();
+      renderPitchLineup();
+    }
+
+    function updateSelectedLabel() {
+      const banner = document.getElementById('selectionBanner');
+      const label = document.getElementById('selectedPlayerLabel');
+      const player = currentLineup.find(p => p.id === selectedPitchPlayerId);
+
+      if (player && banner && label) {
+        label.textContent = `${player.name} (#${player.num} ${player.pos})`;
+        banner.classList.remove('hidden');
+      } else if (banner) {
+        banner.classList.add('hidden');
+      }
+    }
+
+    // SQUAD SELECTOR FILTER & BENCH RENDERING
+    function filterBench(category) {
+      benchFilterType = category;
+      document.querySelectorAll('.bench-filter').forEach(btn => {
+        btn.className = "bench-filter px-2 py-1 border border-black bg-white text-black hover:bg-gray-100 text-[10px] uppercase font-mono";
+      });
+      const activeBtn = document.getElementById(`filter-btn-${category}`);
+      if (activeBtn) {
+        activeBtn.className = "bench-filter px-2 py-1 border border-black bg-black text-white text-[10px] uppercase font-bold font-mono";
+      }
+      renderBench();
+    }
+
+    function renderBench() {
+      const container = document.getElementById('benchContainer');
+      container.innerHTML = '';
+
+      const filtered = currentBench.filter(p => benchFilterType === 'ALL' || p.pos === benchFilterType);
+
+      filtered.forEach(player => {
+        const card = document.createElement('div');
+        card.className = "shrink-0 w-28 bg-white border border-black p-2 cursor-pointer hover:bg-gray-50 active:bg-black active:text-white transition-colors text-center flex flex-col items-center";
+
+        card.innerHTML = `
+          <div class="w-7 h-7 rounded-full border border-black bg-gray-50 flex items-center justify-center font-mono font-bold text-xs mb-1">
+            #${player.num}
+          </div>
+          <div class="font-bold text-xs truncate w-full">${player.name}</div>
+          <div class="flex items-center justify-center gap-1 text-[10px] font-mono text-gray-500 mt-0.5">
+            <span>${player.role}</span>
+            <span>•</span>
+            <span>${player.rating.toFixed(1)}</span>
+          </div>
+        `;
+
+        card.onclick = () => {
+          swapWithBench(player.id);
+        };
+
+        container.appendChild(card);
+      });
+    }
+
+    function swapWithBench(benchPlayerId) {
+      if (!selectedPitchPlayerId) {
+        showToast("Select a player on the pitch first!");
+        return;
+      }
+
+      const pitchIndex = currentLineup.findIndex(p => p.id === selectedPitchPlayerId);
+      const benchIndex = currentBench.findIndex(b => b.id === benchPlayerId);
+
+      if (pitchIndex === -1 || benchIndex === -1) return;
+
+      const pitchPlayer = currentLineup[pitchIndex];
+      const benchPlayer = currentBench[benchIndex];
+
+      currentLineup[pitchIndex] = {
+        id: benchPlayer.id,
+        name: benchPlayer.name,
+        pos: pitchPlayer.pos,
+        num: benchPlayer.num,
+        rating: benchPlayer.rating,
+        x: pitchPlayer.x,
+        y: pitchPlayer.y
+      };
+
+      currentBench[benchIndex] = {
+        id: pitchPlayer.id,
+        name: pitchPlayer.name,
+        pos: benchPlayer.pos,
+        num: pitchPlayer.num,
+        rating: pitchPlayer.rating,
+        role: pitchPlayer.pos
+      };
+
+      showToast(`Swapped: ${benchPlayer.name} ➡️ ${pitchPlayer.name}`);
+      renderPitchLineup();
+      updateSelectedLabel();
+      renderBench();
+    }
+
+    function handleDropSwap(fromId, toId) {
+      if (fromId === toId) return;
+      const idx1 = currentLineup.findIndex(p => p.id === fromId);
+      const idx2 = currentLineup.findIndex(p => p.id === toId);
+
+      if (idx1 !== -1 && idx2 !== -1) {
+        const tempX = currentLineup[idx1].x;
+        const tempY = currentLineup[idx1].y;
+        const tempPos = currentLineup[idx1].pos;
+
+        currentLineup[idx1].x = currentLineup[idx2].x;
+        currentLineup[idx1].y = currentLineup[idx2].y;
+        currentLineup[idx1].pos = currentLineup[idx2].pos;
+
+        currentLineup[idx2].x = tempX;
+        currentLineup[idx2].y = tempY;
+        currentLineup[idx2].pos = tempPos;
+
+        renderPitchLineup();
+        showToast("Pitch positions swapped");
+      }
+    }
+
+    function resetLineup() {
+      currentLineup = JSON.parse(JSON.stringify(initialLineup));
+      currentBench = JSON.parse(JSON.stringify(initialBench));
+      selectedPitchPlayerId = 'p3';
+      renderPitchLineup();
+      updateSelectedLabel();
+      renderBench();
+      showToast("Lineup reset to default");
+    }
+
+    function changeFormation(formation) {
+      currentFormation = formation;
+      if (formation === '4-3-3') {
+        currentLineup[0].x = 20; currentLineup[0].y = 15;
+        currentLineup[1].x = 50; currentLineup[1].y = 12;
+        currentLineup[2].x = 80; currentLineup[2].y = 15;
+
+        currentLineup[3].x = 26; currentLineup[3].y = 38;
+        currentLineup[4].x = 50; currentLineup[4].y = 46;
+        currentLineup[5].x = 74; currentLineup[5].y = 38;
+      } else if (formation === '4-2-3-1') {
+        currentLineup[0].x = 18; currentLineup[0].y = 22;
+        currentLineup[1].x = 50; currentLineup[1].y = 12;
+        currentLineup[2].x = 82; currentLineup[2].y = 22;
+
+        currentLineup[3].x = 50; currentLineup[3].y = 28;
+        currentLineup[4].x = 34; currentLineup[4].y = 45;
+        currentLineup[5].x = 66; currentLineup[5].y = 45;
+      } else if (formation === '3-4-3') {
+        currentLineup[0].x = 20; currentLineup[0].y = 15;
+        currentLineup[1].x = 50; currentLineup[1].y = 12;
+        currentLineup[2].x = 80; currentLineup[2].y = 15;
+
+        currentLineup[3].x = 15; currentLineup[3].y = 40;
+        currentLineup[4].x = 38; currentLineup[4].y = 43;
+        currentLineup[5].x = 62; currentLineup[5].y = 43;
+        currentLineup[6].x = 85; currentLineup[6].y = 40;
+
+        currentLineup[7].x = 26; currentLineup[7].y = 70;
+        currentLineup[8].x = 50; currentLineup[8].y = 73;
+        currentLineup[9].x = 74; currentLineup[9].y = 70;
+      } else if (formation === '4-4-2') {
+        currentLineup[0].x = 35; currentLineup[0].y = 14;
+        currentLineup[1].x = 65; currentLineup[1].y = 14;
+        currentLineup[2].x = 16; currentLineup[2].y = 38;
+
+        currentLineup[3].x = 38; currentLineup[3].y = 42;
+        currentLineup[4].x = 62; currentLineup[4].y = 42;
+        currentLineup[5].x = 84; currentLineup[5].y = 38;
+      }
+
+      renderPitchLineup();
+      showToast(`Formation shifted to ${formation}`);
+    }
+
+    // PUBLISH ACTION
+    function publishLineupToFeed() {
+      const postsContainer = document.getElementById('postsStream');
+      const newPost = document.createElement('article');
+      newPost.className = "border border-black p-4 bg-white space-y-3";
+
+      const starters = currentLineup.slice(0, 3).map(p => p.name.split(' ').pop()).join(', ');
+
+      newPost.innerHTML = `
+        <div class="flex items-center justify-between border-b border-black/10 pb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full border border-black bg-black text-white font-mono font-bold text-xs flex items-center justify-center">
+              YOU
+            </div>
+            <div>
+              <div class="font-bold text-xs uppercase leading-none">Your Tactical Board</div>
+              <div class="text-[10px] text-gray-500 font-mono mt-0.5">@you • Just now</div>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono uppercase border border-black px-1.5 py-0.5">${currentFormation}</span>
+        </div>
+
+        <p class="text-xs text-black leading-relaxed font-normal">
+          "Generated custom XI vs Getafe with frontline: ${starters}. Overloading the flanks to bypass the low block."
+        </p>
+
+        <div class="border border-black p-2.5 bg-gray-50 text-xs font-mono">
+          <div class="text-[10px] text-gray-500 mb-1 uppercase">11 Starters Synced</div>
+          <div class="flex flex-wrap gap-1">
+            ${currentLineup.map(p => `<span class="border border-black bg-white px-1.5 py-0.5 text-[9px]">${p.name.split(' ').pop()} (#${p.num})</span>`).join('')}
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-black text-xs font-mono">
+          <div class="flex items-center gap-3">
+            <button onclick="handleVote(this, 1)" class="vote-btn flex items-center gap-1.5 px-2 py-1 border border-black hover:bg-gray-100">
+              <i data-lucide="arrow-up" class="w-3.5 h-3.5 stroke-black"></i>
+              <span class="font-bold vote-count">1</span>
+            </button>
+            <button onclick="handleDownvote(this, 0)" class="vote-down-btn flex items-center gap-1.5 px-2 py-1 border border-black hover:bg-gray-100">
+              <i data-lucide="arrow-down" class="w-3.5 h-3.5 stroke-black"></i>
+              <span class="font-bold vote-down-count">0</span>
+            </button>
+          </div>
+          <span class="text-gray-500 text-[10px]">0 comments</span>
+        </div>
+      `;
+
+      postsContainer.prepend(newPost);
+      switchView('feed');
+      showToast("Lineup Published to Match Debate!");
+      lucide.createIcons();
+    }
+
+    function submitUserTake() {
+      const input = document.getElementById('quickTakeInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const postsContainer = document.getElementById('postsStream');
+      const newPost = document.createElement('article');
+      newPost.className = "border border-black p-4 bg-white space-y-3";
+
+      newPost.innerHTML = `
+        <div class="flex items-center justify-between border-b border-black/10 pb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full border border-black bg-black text-white font-mono font-bold text-xs flex items-center justify-center">
+              YOU
+            </div>
+            <div>
+              <div class="font-bold text-xs uppercase leading-none">Your Match Take</div>
+              <div class="text-[10px] text-gray-500 font-mono mt-0.5">@you • Just now</div>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono uppercase border border-black px-1.5 py-0.5">Debate</span>
+        </div>
+        <p class="text-xs text-black leading-relaxed font-normal">${text}</p>
+        <div class="flex items-center justify-between pt-2 border-t border-black text-xs font-mono">
+          <div class="flex items-center gap-3">
+            <button onclick="handleVote(this, 1)" class="vote-btn flex items-center gap-1.5 px-2 py-1 border border-black hover:bg-gray-100">
+              <i data-lucide="arrow-up" class="w-3.5 h-3.5 stroke-black"></i>
+              <span class="font-bold vote-count">1</span>
+            </button>
+            <button onclick="handleDownvote(this, 0)" class="vote-down-btn flex items-center gap-1.5 px-2 py-1 border border-black hover:bg-gray-100">
+              <i data-lucide="arrow-down" class="w-3.5 h-3.5 stroke-black"></i>
+              <span class="font-bold vote-down-count">0</span>
+            </button>
+          </div>
+          <span class="text-gray-500 text-[10px]">0 comments</span>
+        </div>
+      `;
+
+      postsContainer.prepend(newPost);
+      input.value = '';
+      showToast("Take posted to feed!");
+      lucide.createIcons();
+    }
+
+    // VOTING LOGIC WITH OUTLINE ICONS
+    function handleVote(btn, baseCount) {
+      const countEl = btn.querySelector('.vote-count');
+      const isVoted = btn.getAttribute('data-voted') === 'true';
+
+      if (isVoted) {
+        btn.removeAttribute('data-voted');
+        btn.classList.remove('bg-black', 'text-white');
+        btn.classList.add('bg-white', 'text-black');
+        btn.querySelector('svg')?.classList.remove('stroke-white');
+        btn.querySelector('svg')?.classList.add('stroke-black');
+        countEl.textContent = baseCount;
+      } else {
+        btn.setAttribute('data-voted', 'true');
+        btn.classList.remove('bg-white', 'text-black');
+        btn.classList.add('bg-black', 'text-white');
+        btn.querySelector('svg')?.classList.remove('stroke-black');
+        btn.querySelector('svg')?.classList.add('stroke-white');
+        countEl.textContent = baseCount + 1;
+        showToast("Upvoted take");
+      }
+    }
+
+    function handleDownvote(btn, baseCount) {
+      const countEl = btn.querySelector('.vote-down-count');
+      const isVoted = btn.getAttribute('data-downvoted') === 'true';
+
+      if (isVoted) {
+        btn.removeAttribute('data-downvoted');
+        btn.classList.remove('bg-black', 'text-white');
+        btn.classList.add('bg-white', 'text-black');
+        btn.querySelector('svg')?.classList.remove('stroke-white');
+        btn.querySelector('svg')?.classList.add('stroke-black');
+        countEl.textContent = baseCount;
+      } else {
+        btn.setAttribute('data-downvoted', 'true');
+        btn.classList.remove('bg-white', 'text-black');
+        btn.classList.add('bg-black', 'text-white');
+        btn.querySelector('svg')?.classList.remove('stroke-black');
+        btn.querySelector('svg')?.classList.add('stroke-white');
+        countEl.textContent = baseCount + 1;
+        showToast("Downvoted take");
+      }
+    }
+
+    function toggleComments(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastNotification');
+      const msgSpan = document.getElementById('toastMessage');
+      if (!toast || !msgSpan) return;
+
+      msgSpan.textContent = msg;
+      toast.classList.remove('-translate-y-12', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-12', 'opacity-0');
+      }, 2200);
+    }
+  </script>
+</body>
+</html>
